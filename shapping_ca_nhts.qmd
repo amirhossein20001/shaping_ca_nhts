@@ -1,0 +1,288 @@
+---
+title: "shapping_ca_nhts"
+editor_options: 
+  chunk_output_type: console
+---
+
+AMIRHOSSEIN SHAHRABADI (400442026)
+
+## Topic: Final semester project of modeling shopping trip duration in California by age in nhts2017 data
+
+```{r}
+load("D:/New folder/nhts/shapping_ca_nhts/RawData.RData")
+library(dplyr)
+library(tidyverse)
+library(tidyr)
+library(tictoc)
+library(caret)
+library(parallelPlot)
+library(earth)
+library(vip)
+library(purrr)
+library(dplyr)
+library(broom)
+library(esquisse)
+library(stargazer)
+library(randomForest) 
+library(ggplot2)
+library(pROC)
+library(mlr3)
+library(paradox)
+library(mlr3learners)
+library(mlr3extralearners)
+library(mlr3pipelines)
+library(mlr3viz)
+library(mlr3tuning)
+library(mlr3data)
+library(mlr3filters)
+library(mlr3tuning)
+library(patchwork)
+library(parallel)
+library(randomForest)
+library(ggplot)
+```
+
+## Data construction
+
+```{r}
+load("D:/New folder/nhts/shapping_ca_nhts/RawData.RData")
+
+index1 <- match(per$HOUSEID,trip$HOUSEID)
+per$whytrip <- trip$WHYTRP1S[index1]
+per$miles <- trip$TRPMILES[index1]
+per$time <- trip$TRVLCMIN[index1]
+per$WTTRDFIN <- trip$WTTRDFIN[index1]
+per$VMT_MILE <- trip$VMT_MILE[index1]
+per$CNTTDHH <- hh$CNTTDHH[index1]
+per$STRTTIME <- trip$STRTTIME[index1]
+per$whytrip <- as.numeric(as.character(per$whytrip))
+shapping_trip <- subset(per, whytrip == 40)
+CA_shapping <- subset(shapping_trip,	HHSTATE == "CA" )
+View(CA_shapping)
+
+
+
+DCSH <- as.data.frame(CA_shapping)
+save(DCSH,file = "DCSH.RData")
+view
+  
+DCSH_M <- subset(DCSH, R_SEX_IMP == 01)
+save(DCSH_M , file = "DCSH_M.RData")
+ 
+DCSH_F <- subset(DCSH, R_SEX_IMP == 02)
+save(DCSH_F , file = "DCSH_F.RData")
+View(DCSH_F)
+```
+
+## FIRST MODEL
+
+```{r}
+load("D:/New folder/nhts/shapping_ca_nhts/DCSH.RData")
+
+set.seed(123) 
+selected_columns  <- c("time","WTTRDFIN","VMT_MILE","TIMETOWK","CNTTDHH","STRTTIME","R_SEX_IMP","miles")
+selected_data <- DCSH %>% 
+  select(all_of(selected_columns))
+# Check for missing values in the selected data
+missing_values <- sum(is.na(selected_data))
+cat("Missing values in the selected data:", missing_values, "\n")
+
+# Drop rows with missing values
+selected_data <- na.omit(selected_data)    
+
+# Split the data into training and testing sets
+set.seed(123)  # Set seed for reproducibility
+train_index <- createDataPartition(selected_data$time, p = 0.8, list = FALSE)
+train_data <- selected_data[train_index, ]
+test_data <- selected_data[-train_index, ]
+
+# Train a simple model (random forest for demonstration)
+model <- randomForest(time ~ ., data = train_data)
+
+# Make predictions on the test set
+predictions <- predict(model, newdata = test_data)
+
+# Evaluate the model (you may need to use appropriate metrics based on your problem)
+rmse <- sqrt(mean((predictions - test_data$time)^2))
+
+cat("Root Mean Squared Error:", rmse, "\n")
+
+rsquared <- 1 - (sum((test_data$time - predictions)^2) / sum((test_data$time - mean(test_data$time))^2))
+cat("R-squared:", rsquared, "\n")
+
+
+# Calculate descriptive statistics for each feature
+for (col in selected_columns) {
+  cat("Descriptive statistics for", col, ":\n")
+  print(summary(selected_data[[col]]))
+  cat("\n")
+}
+
+# Descriptive Statistics 
+
+library(psych)
+
+# Create a data frame with the selected features
+df <- data.frame(
+  WTTRDFIN = selected_data$WTTRDFIN,
+  VMT_MILE = selected_data$VMT_MILE,
+  TIMETOWK = selected_data$TIMETOWK,
+  miles = selected_data$miles
+)
+
+# Compute descriptive statistics
+desc_stats <- describe(df)
+desc_stats <- round(desc_stats, 2)  # Round the values to two decimal places
+
+# Print the descriptive statistics table
+print(desc_stats)
+
+
+
+
+
+
+# Visualize the relationship between predicted and actual travel times
+ggplot(test_data, aes(x = time, y = predictions)) +
+  geom_abline(color = "red") +
+  geom_point() +
+  labs(title = "Predicted vs. Actual Travel Times",
+       x = " Travel Time",
+       y = "Predicted Travel Time") +
+
+ 
+
+
+ggplot(test_data, aes(x = time, y = predictions)) +
+  geom_boxplot() +
+  labs(title = "Predicted vs. Actual Travel Times",
+       x = "Travel Time ",
+       y = "Predicted Travel Time")
+
+
+
+ggplot(test_data, aes(x = time, y = predictions)) +
+  geom_violin(width = 0.2) +
+  labs(title = "نمودار هسیستو گرام",
+       x = "متغیر X",
+       y = "متغیر Y")
+
+
+```
+
+```{r}
+
+```
+
+```{r}
+```
+
+# separately for men and women
+
+```{r}
+#mail
+load("D:/New folder/nhts/shapping_ca_nhts/DCSH_M.RData")
+set.seed(123) 
+selected_columns  <-  c("time","WTTRDFIN","VMT_MILE","TIMETOWK","CNTTDHH","STRTTIME","R_SEX_IMP","miles")
+selected_data <- DCSH_M %>% 
+  select(all_of(selected_columns))
+# Check for missing values in the selected data
+missing_values <- sum(is.na(selected_data))
+cat("Missing values in the selected data:", missing_values, "\n")
+
+# Drop rows with missing values
+selected_data <- na.omit(selected_data)
+
+# Split the data into training and testing sets
+set.seed(123)  # Set seed for reproducibility
+train_index <- createDataPartition(selected_data$time, p = 0.8, list = FALSE)
+train_data <- selected_data[train_index, ]
+test_data <- selected_data[-train_index, ]
+model_M <- randomForest(time ~ ., data = train_data,ntree = 500)
+predictions <- predict(model_M, newdata = test_data)
+rsquared <- 1 - (sum((test_data$time - predictions)^2) / sum((test_data$time - mean(test_data$time))^2))
+cat("R-squared:", rsquared, "\n")
+
+ggplot(test_data, aes(x = time, y = predictions)) +
+  geom_abline(color = "red") +
+  geom_point(color = "blue") +
+  labs(title = "Predicted vs. Actual Travel Times(Mail)",
+       x = " Travel Time",
+       y = "Predicted Travel Time") +
+
+ggplot(test_data, aes(x = time, y = predictions)) +
+  geom_boxplot(color = "blue") +
+  labs(title = "Predicted vs. Actual Travel Times(Mail)",
+       x = "Travel Time ",
+       y = "Predicted Travel Time")
+
+
+load("D:/New folder/nhts/shapping_ca_nhts/DCSH_F.RData")
+
+#femail
+set.seed(123) 
+selected_columns  <-  c("time","WTTRDFIN","VMT_MILE","TIMETOWK","CNTTDHH","STRTTIME","R_SEX_IMP","miles")
+selected_data <- DCSH_F %>% 
+  select(all_of(selected_columns))
+
+missing_values <- sum(is.na(selected_data))
+cat("Missing values in the selected data:", missing_values, "\n")
+
+
+selected_data <- na.omit(selected_data)
+
+set.seed(123)  
+train_index <- createDataPartition(selected_data$time, p = 0.8, list = FALSE)
+train_data <- selected_data[train_index, ]
+test_data <- selected_data[-train_index, ]
+model_F <- randomForest(time ~ ., data = train_data, mtry = 3,ntree = 500)
+
+predictions <- predict(model_F, newdata = test_data)
+
+rsquared <- 1 - (sum((test_data$time - predictions)^2) / sum((test_data$time - mean(test_data$time))^2))
+cat("R-squared:", rsquared, "\n")
+
+ggplot(test_data, aes(x = time, y = predictions)) +
+  geom_abline(color = "black") +
+  geom_point(color = "red") +
+  labs(title = "Predicted vs. Actual Travel Times(femail)",
+       x = " Travel Time",
+       y = "Predicted Travel Time") +
+
+ggplot(test_data, aes(x = time, y = predictions)) +
+  geom_boxplot(color = "red") +
+  labs(title = "Predicted vs. Actual Travel Times(femail)",
+       x = "Travel Time ",
+       y = "Predicted Travel Time")
+
+
+
+
+model_M_results <- data.frame(
+  Actual = test_data$time,
+  Predicted = predict(model_M, newdata = test_data)
+)
+
+# Combine actual and predicted values for model 2
+model_F_results <- data.frame(
+  Actual = test_data$time,
+  Predicted = predict(model_F, newdata = test_data)
+)
+
+# Create a combined data frame for plotting
+combined_results <- rbind(
+  transform(model_M_results, Model = "Mail shapping"),
+  transform(model_F_results, Model = "Femail shapping ")
+)
+
+# Create the scatter plot with a line of best fit
+ggplot(combined_results, aes(x = Actual, y = Predicted, color = Model)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+  labs(x = "Actual", y = "Predicted") +
+  ggtitle("Comparison of Model Predictions") +
+    scale_color_manual(values = c("blue", "red"))
+  
+
+
+```
